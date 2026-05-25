@@ -11,7 +11,7 @@ app.use(cors())
 
 const mongo = require("mongoose")
 
-mongo.connect("mongodb://localhost:27017/otp")
+mongo.connect(process.env.MONGO_URL)
     .then(()=> console.log("mongo db is connected"))
     .catch((err)=> console.error("there is an error in mongo connect"+err))
 app.use("/",route)
