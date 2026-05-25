@@ -33,21 +33,25 @@ exports.register = async(req , res )=>{
                 pass:process.env.APP_PASS
             }
         })
-        await mail.sendMail({
+       try {
 
-            from:"studytamilah@gmail.com",
-            to:email,
-            subject:`your verification code `,
-
-            html:` 
+   await mail.sendMail({
+      from: process.env.EMAIL,
+      to: email,
+      subject: "Your verification code",
+     html:` 
       <h2>Email Verification</h2>
 
       <a href="https://authflow-hub.onrender.com/verify?otp=${OTPm}&email=${email}">
         Verify Email
       </a>`
+   });
 
-        })
+   console.log("MAIL SENT");
 
+} catch(err) {
+   console.log("MAIL ERROR:", err);
+}
 
         res.json({msg:true})
 
