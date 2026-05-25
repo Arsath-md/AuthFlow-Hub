@@ -2,28 +2,35 @@ const user = require("../models/usersSchema")
 const crypt = require("bcrypt")
 const otps = require("../models/otpSchema")
 const nodemail = require("nodemailer")
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 exports.register = async (req, res) => {
+
   try {
 
     const { name, email, password } = req.body;
 
     // VALIDATION
     if (!name || !email || !password) {
+
       return res.status(400).json({
         success: false,
         msg: "All fields are required"
       });
+
     }
 
     // CHECK EXISTING USER
     const existing = await user.findOne({ email });
 
     if (existing) {
+
       return res.status(400).json({
         success: false,
         msg: "Email already exists"
       });
+
     }
 
     // HASH PASSWORD
@@ -37,10 +44,12 @@ exports.register = async (req, res) => {
     });
 
     if (!setdata) {
+
       return res.status(400).json({
         success: false,
         msg: "Cannot add user"
       });
+
     }
 
     // GENERATE OTP
@@ -62,37 +71,15 @@ exports.register = async (req, res) => {
       msg: "Registered Successfully"
     });
 
-    // CREATE MAIL TRANSPORT
-  const mail = nodemail.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.APP_PASS,
-  },
-
-  family: 4,
-
-  tls: {
-    rejectUnauthorized: false,
-  },
-
-  connectionTimeout: 10000,
-});
-
+    // SEND EMAIL USING RESEND
     try {
 
-      // VERIFY SMTP
-      await mail.verify();
+      const data = await resend.emails.send({
 
-      console.log("SMTP READY");
+        from: "onboarding@resend.dev",
 
-      // SEND MAIL
-      const info = await mail.sendMail({
-        from: process.env.EMAIL,
         to: email,
+
         subject: "Verification Code",
 
         html: `
@@ -141,7 +128,7 @@ exports.register = async (req, res) => {
         `
       });
 
-      console.log("MAIL SENT:", info.response);
+      console.log("MAIL SENT:", data);
 
     } catch (err) {
 
@@ -159,6 +146,7 @@ exports.register = async (req, res) => {
     });
 
   }
+
 };
 exports.verify = async (req, res) => {
     try {
