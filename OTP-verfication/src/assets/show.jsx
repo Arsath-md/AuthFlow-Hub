@@ -139,7 +139,7 @@ const API_URL = import.meta.env.VITE_API_URL;
         {/* BACK BUTTON */}
         <div className="flex justify-center pt-6">
           <button
-            onClick={() => nav(-1)}
+            onClick={() => nav("/")}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 hover:scale-105 active:scale-95 transition"
           >
             ← Back
