@@ -1,7 +1,7 @@
 const user = require("../models/usersSchema")
 const crypt = require("bcrypt")
 const otps = require("../models/otpSchema")
-const nodemail = require("nodemailer")
+const nodemailer = require("nodemailer")
 
 
 // BREVO SMTP TRANSPORT
