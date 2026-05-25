@@ -39,53 +39,12 @@ exports.register = async(req , res )=>{
             to:email,
             subject:`your verification code `,
 
-            html:`
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6; border: 1px solid #e5e5e5; border-radius: 10px;">
+            html:` 
+      <h2>Email Verification</h2>
 
-  <h2 style="color: #222;">Email Verification</h2>
-
-  <p>Hello,</p>
-
-  <p>
-    Thank you for registering. Please verify your email address by clicking the button below:
-  </p>
-
-  <div style="text-align: center; margin: 30px 0;">
-    <a 
-      href="http://localhost:5000/verify?otp=${OTPm}&email=${email}"
-      style="
-        background-color: #000;
-        color: #fff;
-        padding: 12px 24px;
-        text-decoration: none;
-        border-radius: 6px;
-        display: inline-block;
-        font-weight: bold;
-      "
-    >
-      Verify Email
-    </a>
-  </div>
-
-  <p>
-    This verification link will expire in <strong>5 minutes</strong>.
-  </p>
-
-  <p>
-    If you did not create this account, you can safely ignore this email.
-  </p>
-
-  <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 30px 0;" />
-
-  <p style="font-size: 12px; color: #777;">
-    © 2026 HIFI . All rights reserved.
-  </p>
-
-</div>
-`
-
-            
-
+      <a href="https://authflow-hub.onrender.com/verify?otp=${OTPm}&email=${email}">
+        Verify Email
+      </a>`
 
         })
 
@@ -129,7 +88,7 @@ exports.verify = async (req, res) => {
 
        await otps.deleteMany({email});
 
-        return res.redirect(`http://localhost:5173/show`);
+return res.redirect("https://auth-flow-hub.vercel.app/show");
 
     } catch (e) {
         res.json({ msg: `there is an error in verify otp: ${e}` });
