@@ -3,63 +3,86 @@ const crypt = require("bcrypt")
 const otps = require("../models/otpSchema")
 const nodemail = require("nodemailer")
 
-exports.register = async(req , res )=>{
-    try{
-        const {name,email,password} = req.body
-        console.log(password);
-        
-        const hashed = await crypt.hash(password,10)
-        const setdata = await user.create({
-            name:name,
-            email:email,
-            password:hashed
-        })
-        if(!setdata){
-            return res.json({msg:"cant add to db "})
-        }
+exports.register = async (req, res) => {
+  try {
 
-        const OTPm = Math.floor(100000 + Math.random()* 900000)
-        const otphash =await crypt.hash(OTPm.toString(),10)
+    const { name, email, password } = req.body;
 
-        const otpsave = await otps.create({
-            email:email,
-            otp:otphash,
-            expire:new Date(Date.now()+5*60*1000)
-        })
-        const mail =await nodemail.createTransport({
-            service:"gmail",
-            auth:{
-                user:process.env.EMAIL,
-                pass:process.env.APP_PASS
-            }
-        })
-       try {
+    const hashed = await crypt.hash(password, 10);
 
-   await mail.sendMail({
-      from: process.env.EMAIL,
-      to: email,
-      subject: "Your verification code",
-     html:` 
-      <h2>Email Verification</h2>
+    const setdata = await user.create({
+      name,
+      email,
+      password: hashed
+    });
 
-      <a href="https://authflow-hub.onrender.com/verify?otp=${OTPm}&email=${email}">
-        Verify Email
-      </a>`
-   });
-
-   console.log("MAIL SENT");
-
-} catch(err) {
-   console.log("MAIL ERROR:", err);
-}
-
-        res.json({msg:true})
-
-    }catch(e){
-        res.json({msg:`error in mongo ${e}`})
+    if (!setdata) {
+      return res.status(400).json({
+        success: false,
+        msg: "Cannot add user"
+      });
     }
 
-}
+    const OTPm = Math.floor(100000 + Math.random() * 900000);
+
+    const otphash = await crypt.hash(OTPm.toString(), 10);
+
+    await otps.create({
+      email,
+      otp: otphash,
+      expire: new Date(Date.now() + 5 * 60 * 1000)
+    });
+
+    // SEND RESPONSE IMMEDIATELY
+    res.status(200).json({
+      success: true,
+      msg: "Registered Successfully"
+    });
+
+    // MAIL AFTER RESPONSE
+    const mail = nodemail.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.APP_PASS
+      }
+    });
+
+    try {
+
+      const info = await mail.sendMail({
+        from: process.env.EMAIL,
+        to: email,
+        subject: "Verification Code",
+
+        html: `
+          <h2>Email Verification</h2>
+
+          <a href="https://authflow-hub.onrender.com/verify?otp=${OTPm}&email=${email}">
+            Verify Email
+          </a>
+        `
+      });
+
+      console.log("MAIL SENT:", info.response);
+
+    } catch (err) {
+
+      console.log("MAIL ERROR:", err);
+
+    }
+
+  } catch (e) {
+
+    console.log(e);
+
+    res.status(500).json({
+      success: false,
+      msg: "Server Error"
+    });
+
+  }
+};
 exports.verify = async (req, res) => {
     try {
         const { otp, email } = req.query;
