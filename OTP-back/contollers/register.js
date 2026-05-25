@@ -63,18 +63,24 @@ exports.register = async (req, res) => {
     });
 
     // CREATE MAIL TRANSPORT
-    const mail = nodemail.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
+  const mail = nodemail.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
 
-      auth: {
-        user: process.env.EMAIL,
-        pass: process.env.APP_PASS
-      },
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.APP_PASS,
+  },
 
-      connectionTimeout: 10000,
-    });
+  family: 4,
+
+  tls: {
+    rejectUnauthorized: false,
+  },
+
+  connectionTimeout: 10000,
+});
 
     try {
 
