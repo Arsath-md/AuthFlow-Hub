@@ -1,19 +1,18 @@
-const user = require("../models/usersSchema")
-const crypt = require("bcrypt")
-const otps = require("../models/otpSchema")
-const nodemailer = require("nodemailer")
 
+const user = require("../models/usersSchema");
+const crypt = require("bcrypt");
+const otps = require("../models/otpSchema");
 
-// BREVO SMTP TRANSPORT
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_EMAIL,
-    pass: process.env.BREVO_SMTP_KEY
-  }
-});
+const SibApiV3Sdk = require("sib-api-v3-sdk");
+
+// BREVO API CONFIG
+const client = SibApiV3Sdk.ApiClient.instance;
+
+const apiKey = client.authentications["api-key"];
+
+apiKey.apiKey = process.env.BREVO_API_KEY;
+
+const tranEmailApi = new SibApiV3Sdk.TransactionalEmailsApi();
 
 // REGISTER
 exports.register = async (req, res) => {
@@ -32,7 +31,7 @@ exports.register = async (req, res) => {
 
     }
 
-    // CHECK EXISTING USER
+    // CHECK USER
     const existing = await user.findOne({ email });
 
     if (existing) {
@@ -76,24 +75,31 @@ exports.register = async (req, res) => {
       expire: new Date(Date.now() + 5 * 60 * 1000)
     });
 
-    // SEND RESPONSE FAST
+    // FAST RESPONSE
     res.status(200).json({
       success: true,
       msg: "Registered Successfully"
     });
 
-    // SEND EMAIL USING BREVO
+    // SEND EMAIL USING BREVO API
     try {
 
-      const info = await transporter.sendMail({
+      const data = await tranEmailApi.sendTransacEmail({
 
-        from: `"HIFI" <${process.env.BREVO_EMAIL}>`,
+        sender: {
+          email: "vippismart@gmail.com",
+          name: "HIFI SMART"
+        },
 
-        to: email,
+        to: [
+          {
+            email: email
+          }
+        ],
 
         subject: "Verification Code",
 
-        html: `
+        htmlContent: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.6; border: 1px solid #e5e5e5; border-radius: 10px;">
 
           <h2 style="color: #222;">Email Verification</h2>
@@ -132,14 +138,14 @@ exports.register = async (req, res) => {
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 30px 0;" />
 
           <p style="font-size: 12px; color: #777;">
-            © 2026 HIFI. All rights reserved.
+            © 2026 HIFI SMART. All rights reserved.
           </p>
 
         </div>
         `
       });
 
-      console.log("MAIL SENT:", info.messageId);
+      console.log("MAIL SENT:", data);
 
     } catch (err) {
 
@@ -159,51 +165,94 @@ exports.register = async (req, res) => {
   }
 
 };
+
+// VERIFY OTP
 exports.verify = async (req, res) => {
-    try {
-        const { otp, email } = req.query;
 
-        console.log("the otp " + otp + " email: " + email);
+  try {
 
-        const data = await otps.findOne({ email }).sort({ _id: -1 });
-        console.log("Received OTP:", otp);
-        console.log("DB HASH:", data.otp);
+    const { otp, email } = req.query;
 
-        if (!data) {
-            return res.json({ msg: "OTP not found" });
-        }
+    console.log("OTP:", otp);
+    console.log("EMAIL:", email);
 
-        const decrypt = await crypt.compare(
-                otp.toString().trim(),
-                data.otp
-            );
-            console.log(decrypt)
+    const data = await otps.findOne({ email }).sort({ _id: -1 });
 
-        const dates = new Date();
+    if (!data) {
 
-        if (!decrypt) {
-            return res.json({ msg: "no password decrypt" });
-        }
+      return res.json({
+        success: false,
+        msg: "OTP not found"
+      });
 
-        if (data.expire < dates) {
-            return res.json({ msg: "expired" });
-        }
-
-       await otps.deleteMany({email});
-
-return res.redirect("https://auth-flow-hub.vercel.app/show");
-
-    } catch (e) {
-        res.json({ msg: `there is an error in verify otp: ${e}` });
     }
-}
 
-exports.getregister=async(req ,res )=>{
-    try{
-        const name =await user.find({})
-        res.json(name)
+    // COMPARE OTP
+    const decrypt = await crypt.compare(
+      otp.toString().trim(),
+      data.otp
+    );
 
-    }catch(e){
-        console.log("there is an errro r i get regiter")
+    if (!decrypt) {
+
+      return res.json({
+        success: false,
+        msg: "Invalid OTP"
+      });
+
     }
-}
+
+    // CHECK EXPIRY
+    const currentDate = new Date();
+
+    if (data.expire < currentDate) {
+
+      return res.json({
+        success: false,
+        msg: "OTP expired"
+      });
+
+    }
+
+    // DELETE USED OTP
+    await otps.deleteMany({ email });
+
+    // REDIRECT
+    return res.redirect(
+      "https://auth-flow-hub.vercel.app/show"
+    );
+
+  } catch (e) {
+
+    console.log("VERIFY ERROR:", e);
+
+    res.status(500).json({
+      success: false,
+      msg: "Server Error"
+    });
+
+  }
+
+};
+
+// GET REGISTERED USERS
+exports.getregister = async (req, res) => {
+
+  try {
+
+    const users = await user.find({});
+
+    res.json(users);
+
+  } catch (e) {
+
+    console.log("GET REGISTER ERROR:", e);
+
+    res.status(500).json({
+      success: false,
+      msg: "Server Error"
+    });
+
+  }
+
+};
