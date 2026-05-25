@@ -2,9 +2,20 @@ const user = require("../models/usersSchema")
 const crypt = require("bcrypt")
 const otps = require("../models/otpSchema")
 const nodemail = require("nodemailer")
-const { Resend } = require("resend");
-const resend = new Resend(process.env.RESEND_API_KEY);
 
+
+// BREVO SMTP TRANSPORT
+const transporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.BREVO_EMAIL,
+    pass: process.env.BREVO_SMTP_KEY
+  }
+});
+
+// REGISTER
 exports.register = async (req, res) => {
 
   try {
@@ -71,12 +82,12 @@ exports.register = async (req, res) => {
       msg: "Registered Successfully"
     });
 
-    // SEND EMAIL USING RESEND
+    // SEND EMAIL USING BREVO
     try {
 
-      const data = await resend.emails.send({
+      const info = await transporter.sendMail({
 
-        from: "onboarding@resend.dev",
+        from: `"HIFI" <${process.env.BREVO_EMAIL}>`,
 
         to: email,
 
@@ -128,7 +139,7 @@ exports.register = async (req, res) => {
         `
       });
 
-      console.log("MAIL SENT:", data);
+      console.log("MAIL SENT:", info.messageId);
 
     } catch (err) {
 
